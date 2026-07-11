@@ -2,19 +2,12 @@
 # Abre o Steam em Big Picture (na GPU NVIDIA + cap 60 via MangoHud) e,
 # assim que a interface sobe, navega direto pra Biblioteca.
 # Ajuste o EXTRA_DELAY se ele abrir na Home (aumentar) ou navegar cedo demais.
+#
+# O governor de CPU sob demanda NAO fica aqui (rodava so 1x no login e nao
+# reativava ao reabrir a Steam). Quem cuida disso agora e o monitor persistente
+# scripts/steam-power-monitor.sh (autostart proprio). Ver secao 20 do README.
 
 EXTRA_DELAY=8
-
-# Governor sob demanda (anti-stutter em jogo leve, sem gastar no "modo dev"):
-# enquanto a Steam estiver aberta -> perfil 'latency-performance' (governor
-# performance + C-states rasos). Ao FECHAR a Steam (ou deslogar) volta pro
-# 'balanced-bazzite' (baixo consumo). O tuned-adm troca o perfil SEM sudo
-# nesta sessao (via polkit). Substitui o feral gamemode, que nao instala
-# nesta imagem por um estado corrompido do rpm-ostree (dedupe fantasma).
-PROFILE_GAME=latency-performance
-PROFILE_IDLE=balanced-bazzite
-tuned-adm profile "$PROFILE_GAME" >/dev/null 2>&1
-trap 'tuned-adm profile "$PROFILE_IDLE" >/dev/null 2>&1' EXIT
 
 # Cursor invisivel SO no Steam/jogos (desktop do KDE mantem cursor normal).
 # Usa o tema 'blank' (100% transparente) em ~/.local/share/icons/blank.
@@ -36,9 +29,3 @@ done
 # folga extra pra Big Picture ficar interativo, entao pula pra Biblioteca
 sleep "$EXTRA_DELAY"
 /usr/bin/bazzite-steam steam://open/games >/dev/null 2>&1
-
-# segura o script vivo enquanto a Steam roda; quando ela fechar, o trap EXIT
-# reverte o perfil de energia pro modo idle/dev.
-while pgrep -x steam >/dev/null 2>&1; do
-    sleep 10
-done

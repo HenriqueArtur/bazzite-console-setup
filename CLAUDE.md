@@ -32,6 +32,8 @@ Runbook de reinstalação de um **notebook Dell G3 3500 rodando Bazzite Kinoite*
 | Arquivo do repo | Destino |
 |---|---|
 | `scripts/steam-console.sh` | `~/.local/bin/` (chmod +x) — launcher central |
+| `scripts/steam-power-monitor.sh` | `~/.local/bin/` (chmod +x) — governor sob demanda (autostart) |
+| `configs/steam-power-monitor.desktop` | `~/.config/autostart/` |
 | `scripts/make_blank_cursor.py` | roda 1x, gera `~/.local/share/icons/blank` |
 | `configs/steam.desktop` | `~/.config/autostart/` |
 | `configs/MangoHud.conf` | `~/.config/MangoHud/` |

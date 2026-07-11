@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Steam Power Monitor
+Comment=Governor de CPU sob demanda conforme a Steam abre/fecha
+Comment[pt_BR]=Governor de CPU sob demanda conforme a Steam abre/fecha
+Exec=/home/SEU_USUARIO/.local/bin/steam-power-monitor.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

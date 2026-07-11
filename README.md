@@ -41,9 +41,11 @@ bazzite-console-setup/
 ├── .gitignore
 ├── scripts/
 │   ├── steam-console.sh        → vai pra ~/.local/bin/
+│   ├── steam-power-monitor.sh  → ~/.local/bin/ (governor sob demanda)
 │   └── make_blank_cursor.py    → gera o tema de cursor invisível
 └── configs/
     ├── steam.desktop           → ~/.config/autostart/
+    ├── steam-power-monitor.desktop → ~/.config/autostart/
     ├── MangoHud.conf           → ~/.config/MangoHud/
     ├── kwalletrc               → ~/.config/
     ├── kcminputrc-Mouse.txt    → trecho de ~/.config/kcminputrc
@@ -279,20 +281,29 @@ Adaptador: Intel 9460/9560.
   # colocar o DS4 em pareamento (Share + PS) e parear de novo pela GUI
   ```
 
-## 20. Governor sob demanda (tuned via launcher) — anti-stutter em jogo leve
+## 20. Governor sob demanda (monitor tuned) — anti-stutter em jogo leve
 
 **Problema:** o CPU governor vinha em `powersave`. Em jogo leve (que não pressiona a CPU) o clock não segura o boost → spikes de frametime = **engasgo**. Mas a máquina agora também serve pra **desenvolver jogo** — não pode ficar em `performance` o tempo todo, senão gasta à toa quando está só codando/parada.
 
-**Solução:** `performance` **só enquanto a Steam está aberta** (= modo console); ao fechar a Steam (= modo dev), volta pro perfil econômico. Feito com **tuned**, direto no `scripts/steam-console.sh` — sem pacote extra, sem reboot.
+**Solução:** `performance` **só enquanto a Steam está aberta** (= modo console); ao fechar a Steam (= modo dev), volta pro perfil econômico. Feito com **tuned**, sem pacote extra e sem reboot.
 
 > ⚠️ **Por que não o feral gamemode?** Seria o ideal (ativa por processo de jogo), mas `rpm-ostree install gamemode` **não entra** nesta imagem: o rpm-ostree tem um estado corrompido que deduplica o pacote contra um `gamemode-1.8.2-4.fc44` fantasma ("already provided by base") que **não existe** no commit base (`rpm-ostree db list` vazio). Nem `reset` limpa. tuned faz o mesmo pro que importa aqui (o governor era o gargalo) sem mexer no sistema atômico.
 
-**Como funciona** (já embutido no launcher):
+**Como funciona:** um **monitor persistente** (`scripts/steam-power-monitor.sh`) roda a sessão inteira pelo seu próprio autostart, vigia o processo `steam` e troca o perfil na **transição** abre/fecha:
+- Steam abre → `latency-performance` (governor performance + C-states rasos)
+- Steam fecha → `balanced-bazzite` (baixo consumo)
+
+> 🐛 **Por que um monitor e não dentro do launcher?** A 1ª versão fazia o switch no `steam-console.sh`, que roda **só 1x no login**: fechava a Steam e reabrindo (direto, sem o autostart) o perfil **não reativava**. O monitor separado resolve — reativa em toda abertura.
+
+O `tuned-adm profile` troca o perfil **sem sudo** nesta sessão (via polkit). O monitor é **edge-triggered**: só age na transição, então **não atropela** um `tuned-adm` manual seu enquanto o estado da Steam não muda.
+
+**Instalar:**
 ```bash
-tuned-adm profile latency-performance    # ao abrir a Steam (governor performance + C-states rasos)
-trap 'tuned-adm profile balanced-bazzite' EXIT   # ao fechar/deslogar volta ao baixo consumo
+cp scripts/steam-power-monitor.sh ~/.local/bin/ && chmod +x ~/.local/bin/steam-power-monitor.sh
+cp configs/steam-power-monitor.desktop ~/.config/autostart/   # trocar SEU_USUARIO no Exec
+# inicia sem precisar deslogar:
+setsid ~/.local/bin/steam-power-monitor.sh >/dev/null 2>&1 < /dev/null &
 ```
-O `tuned-adm profile` troca o perfil **sem sudo** nesta sessão (via polkit). O script segura vivo enquanto o processo `steam` existir e reverte quando ele some.
 
 **Perfis:** `latency-performance` (jogo) ↔ `balanced-bazzite` (dev/idle). Pra economizar ainda mais no idle, trocar `PROFILE_IDLE` pra `powersave-bazzite` no script.
 
@@ -302,9 +313,10 @@ O `tuned-adm profile` troca o perfil **sem sudo** nesta sessão (via polkit). O 
 cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor   # -> performance
 tuned-adm active                                            # -> latency-performance
 # feche a Steam e confira de novo: governor volta a powersave / balanced-bazzite
+# reabra a Steam: deve voltar a performance (o bug do monitor era exatamente isso)
 ```
 
-**Manual** (build pesado no dev sem abrir a Steam): `tuned-adm profile latency-performance` liga, `tuned-adm profile balanced-bazzite` desliga.
+**Manual** (build pesado no dev sem abrir a Steam): `tuned-adm profile latency-performance` liga, `tuned-adm profile balanced-bazzite` desliga. Como o monitor é edge-triggered, ele respeita isso até a Steam abrir/fechar.
 
 ## 19. Térmico / G-Mode
 
