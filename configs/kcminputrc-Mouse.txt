@@ -1,0 +1,3 @@
+# Trecho de ~/.config/kcminputrc responsavel pelo cursor invisivel global.
+[Mouse]
+cursorTheme=blank

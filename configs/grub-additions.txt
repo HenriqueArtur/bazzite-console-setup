@@ -1,0 +1,4 @@
+# Linhas adicionadas ao fim de /etc/default/grub (requer sudo).
+# Depois rodar: sudo ujust regenerate-grub   (ou: ujust configure-grub hide)
+GRUB_TIMEOUT=1
+GRUB_TIMEOUT_STYLE=hidden

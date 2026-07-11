@@ -1,0 +1,7 @@
+# Segredos / dados da máquina
+.env
+
+# Lixo de sistema
+*.swp
+*~
+.DS_Store
