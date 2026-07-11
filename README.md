@@ -279,6 +279,33 @@ Adaptador: Intel 9460/9560.
   # colocar o DS4 em pareamento (Share + PS) e parear de novo pela GUI
   ```
 
+## 20. Governor sob demanda (tuned via launcher) — anti-stutter em jogo leve
+
+**Problema:** o CPU governor vinha em `powersave`. Em jogo leve (que não pressiona a CPU) o clock não segura o boost → spikes de frametime = **engasgo**. Mas a máquina agora também serve pra **desenvolver jogo** — não pode ficar em `performance` o tempo todo, senão gasta à toa quando está só codando/parada.
+
+**Solução:** `performance` **só enquanto a Steam está aberta** (= modo console); ao fechar a Steam (= modo dev), volta pro perfil econômico. Feito com **tuned**, direto no `scripts/steam-console.sh` — sem pacote extra, sem reboot.
+
+> ⚠️ **Por que não o feral gamemode?** Seria o ideal (ativa por processo de jogo), mas `rpm-ostree install gamemode` **não entra** nesta imagem: o rpm-ostree tem um estado corrompido que deduplica o pacote contra um `gamemode-1.8.2-4.fc44` fantasma ("already provided by base") que **não existe** no commit base (`rpm-ostree db list` vazio). Nem `reset` limpa. tuned faz o mesmo pro que importa aqui (o governor era o gargalo) sem mexer no sistema atômico.
+
+**Como funciona** (já embutido no launcher):
+```bash
+tuned-adm profile latency-performance    # ao abrir a Steam (governor performance + C-states rasos)
+trap 'tuned-adm profile balanced-bazzite' EXIT   # ao fechar/deslogar volta ao baixo consumo
+```
+O `tuned-adm profile` troca o perfil **sem sudo** nesta sessão (via polkit). O script segura vivo enquanto o processo `steam` existir e reverte quando ele some.
+
+**Perfis:** `latency-performance` (jogo) ↔ `balanced-bazzite` (dev/idle). Pra economizar ainda mais no idle, trocar `PROFILE_IDLE` pra `powersave-bazzite` no script.
+
+**Conferir:**
+```bash
+# com a Steam aberta:
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor   # -> performance
+tuned-adm active                                            # -> latency-performance
+# feche a Steam e confira de novo: governor volta a powersave / balanced-bazzite
+```
+
+**Manual** (build pesado no dev sem abrir a Steam): `tuned-adm profile latency-performance` liga, `tuned-adm profile balanced-bazzite` desliga.
+
 ## 19. Térmico / G-Mode
 
 Fans **funcionam** e sobem com a curva (~3470 RPM idle-load → ~4100 em jogo pesado; máx ~5600). Sob jogo pesado: CPU ~85°C, GPU NVIDIA ~68°C.
